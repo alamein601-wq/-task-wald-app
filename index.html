@@ -1,34 +1,198 @@
-<!DOCTYPE html><html lang="en">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Task Wald</title>
-<style>
-body{font-family:Arial,sans-serif;background:#101827;color:white;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-.box{background:#1e293b;padding:28px;border-radius:16px;width:85%;max-width:360px}
-h1{color:#a3e635;text-align:center}
-input,button{box-sizing:border-box;width:100%;padding:13px;margin:9px 0;border-radius:8px;border:0}
-button{background:#a3e635;font-weight:bold;font-size:16px}
-p{text-align:center;color:#cbd5e1}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101827">
+  <title>Task Wald</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #101827;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .box {
+      background: #1e293b;
+      padding: 28px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    h1 { color: #a3e635; }
+
+    p { color: #cbd5e1; line-height: 1.5; }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      margin: 9px 0;
+      border-radius: 8px;
+      border: 0;
+      background: #a3e635;
+      color: #101827;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: .6; }
+
+    .secondary {
+      background: #334155;
+      color: white;
+    }
+
+    #user-area { display: none; }
+
+    #message {
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+  </style>
 </head>
+
 <body>
-<div class="box">
-<h1>Task Wald</h1>
-<p>Create your account</p>
-<form id="signup">
-<input id="name" placeholder="Your name" required>
-<input id="email" type="email" placeholder="Email address" required>
-<input id="password" type="password" placeholder="Password (min 8 characters)" minlength="8" required>
-<button type="submit">Sign Up</button>
-</form>
-<p id="message"></p>
-</div>
-<script>
-document.getElementById('signup').addEventListener('submit',function(e){
-e.preventDefault();
-document.getElementById('message').textContent='Form ready. Secure account setup is still required.';
-});
-</script>
+  <main class="box">
+    <h1>Task Wald</h1>
+    <p>Your AI assistant, ready to help.</p>
+
+    <section id="login-area">
+      <p>Continue securely with your Google account.</p>
+      <button id="google-btn" type="button">
+        Continue with Google
+      </button>
+    </section>
+
+    <section id="user-area">
+      <p id="welcome"></p>
+      <button id="continue-btn" type="button">
+        Continue to Task Wald
+      </button>
+      <button id="logout-btn" class="secondary" type="button">
+        Sign Out
+      </button>
+    </section>
+
+    <p id="message" role="status" aria-live="polite"></p>
+  </main>
+
+  <script type="module">
+    import { initializeApp }
+      from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDRkaNf8WcDk3yHl-ojGyp-sVJ_KhPsfB8",
+      authDomain: "task-wald.firebaseapp.com",
+      projectId: "task-wald",
+      storageBucket: "task-wald.firebasestorage.app",
+      messagingSenderId: "778667805750",
+      appId: "1:778667805750:web:ba5162573ca19efb251c97",
+      measurementId: "G-WH49JXJZ48"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    provider.setCustomParameters({
+      prompt: "select_account"
+    });
+
+    const loginArea = document.getElementById("login-area");
+    const userArea = document.getElementById("user-area");
+    const googleBtn = document.getElementById("google-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const message = document.getElementById("message");
+
+    function showError(error) {
+      console.error(error);
+
+      const messages = {
+        "auth/unauthorized-domain":
+          "This website domain is not authorized in Firebase.",
+        "auth/operation-not-allowed":
+          "Enable Google sign-in in Firebase Authentication.",
+        "auth/invalid-api-key":
+          "Firebase API key is invalid. Check the Web App configuration.",
+        "auth/popup-blocked":
+          "Google popup blocked. Allow popups and try again.",
+        "auth/popup-closed-by-user":
+          "Google sign-in was closed before completion.",
+        "auth/network-request-failed":
+          "Network error. Check your internet connection."
+      };
+
+      message.textContent =
+        (messages[error.code] || "Sign-in failed. Please try again.") +
+        " (" + (error.code || "unknown") + ")";
+    }
+
+    googleBtn.addEventListener("click", async () => {
+      googleBtn.disabled = true;
+      message.textContent = "Connecting to Google...";
+
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        showError(error);
+      } finally {
+        googleBtn.disabled = false;
+      }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginArea.style.display = "none";
+        userArea.style.display = "block";
+
+        document.getElementById("welcome").textContent =
+          "Welcome, " + (user.displayName || user.email || "User") + "!";
+
+        message.textContent = "Login successful.";
+      } else {
+        loginArea.style.display = "block";
+        userArea.style.display = "none";
+      }
+    });
+
+    document.getElementById("continue-btn").addEventListener("click", () => {
+      message.textContent =
+        "Login successful. The AI page has not been connected yet.";
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+
+      try {
+        await signOut(auth);
+        message.textContent = "Signed out successfully.";
+      } catch (error) {
+        showError(error);
+      } finally {
+        logoutBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
-</html> 
+</html>
